@@ -68,6 +68,16 @@ node* get_n_to_last(node* head, int n)
     return q;
 }
 
+void remove_node(node* c)
+{
+    if(c == NULL || c->next == NULL)
+        return;
+    node* p = c->next;
+    c->data = p->data;
+    c->next = p->next;
+    free(p);
+}
+
 void deinit(node* head)
 {
     node *p = head;
@@ -78,12 +88,24 @@ void deinit(node* head)
     }
 }
 
+void print_list(node* head)
+{
+    node *p = head;
+    while(p) {
+        printf("%d ", p->data);
+        p = p->next;
+    }
+    printf("\n");
+}
+
 int main()
 {
     int a[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     node *head = init_list(a, 10);
     node *p = get_n_to_last(head, 3);
     printf("%d\n", p->data);
+    remove_node(head->next);
+    print_list(head);
     deinit(head);
     
     return 0;
