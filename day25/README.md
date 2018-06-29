@@ -375,3 +375,131 @@ int main(){
 }
 ```
 
+
+
+# 5.5
+
+## 题目
+
+原文：
+
+Write a function to determine the number of bits required to convert integer A to integer B.
+
+Input: 31, 14
+
+Output: 2
+
+译文：
+
+写程序计算从整数A变为整数B需要修改的二进制位数。
+
+输入：31，14
+
+输出：2
+
+## 解答
+
+这道题目也比较简单，从整数A变到整数B，所需要修改的就只是A和B二进制表示中不同的位， 先将A和B做异或，然后再统计结果的二进制表示中1的个数即可。
+
+代码如下：
+
+```
+int count_one(int x){
+    x = (x & (0x55555555)) + ((x >> 1) & (0x55555555));
+    x = (x & (0x33333333)) + ((x >> 2) & (0x33333333));
+    x = (x & (0x0f0f0f0f)) + ((x >> 4) & (0x0f0f0f0f));
+    x = (x & (0x00ff00ff)) + ((x >> 8) & (0x00ff00ff));
+    x = (x & (0x0000ffff)) + ((x >> 16) & (0x0000ffff));
+    return x;
+}
+
+int convert_num(int a, int b){
+    return count_one(a^b);
+}
+
+```
+
+完整代码如下：
+
+```c++
+#include <iostream>
+using namespace std;
+
+int count_one(int x){
+    x = (x & (0x55555555)) + ((x >> 1) & (0x55555555));
+    x = (x & (0x33333333)) + ((x >> 2) & (0x33333333));
+    x = (x & (0x0f0f0f0f)) + ((x >> 4) & (0x0f0f0f0f));
+    x = (x & (0x00ff00ff)) + ((x >> 8) & (0x00ff00ff));
+    x = (x & (0x0000ffff)) + ((x >> 16) & (0x0000ffff));
+    return x;
+}
+
+int convert_num(int a, int b){
+    return count_one(a^b);
+}
+int main(){
+    int a = 7, b = 14;
+    cout<<convert_num(a, b)<<endl;
+    return 0;
+}
+```
+
+# 5.6
+
+## 题目
+
+原文：
+
+Write a program to swap odd and even bits in an integer with as few instructions as possible (e.g., bit 0 and bit 1 are swapped, bit 2 and bit 3 are swapped, etc).
+
+译文：
+
+写程序交换一个整数二进制表示中的奇数位和偶数位，用尽可能少的代码实现。 (比如，第0位和第1位交换，第2位和第3位交换…)
+
+## 解答
+
+这道题目比较简单。分别将这个整数的奇数位和偶数位提取出来，然后移位取或即可。
+
+代码如下：
+
+```
+int swap_bits(int x){
+    return ((x & 0x55555555) << 1) | ((x >> 1) & 0x55555555);
+}
+
+```
+
+当然也可以采用更自然的方式来写这段代码：
+
+```
+int swap_bits1(int x){
+    return ((x & 0x55555555) << 1) | ((x & 0xAAAAAAAA) >> 1);
+}
+
+```
+
+上面的代码思路和作用都是一样的，不过按照《Hacker’s delight》这本书里的说法， 第一种方法避免了在一个寄存器中生成两个大常量。如果计算机没有与非指令， 将导致第二种方法多使用1个指令。总结之，就是第一种方法更好。:P
+
+完整代码如下： 
+
+```c++
+#include <iostream>
+using namespace std;
+
+void print_binary(int x){ 
+  string s = “”;
+  for(int i=0; i<32 && x!=0; ++i, x »= 1)
+  { if(x&1) s = “1” + s; else s = “0” + s; } 
+  cout«s«endl; 
+} 
+int swap_bits(int x){ return ((x & 0x55555555) « 1) | ((x » 1) & 0x55555555); } 
+int swap_bits1(int x){ return ((x & 0x55555555) « 1) | ((x & 0xAAAAAAAA) » 1); } 
+int main(){ 
+  int x = -7665543; 
+  print_binary(x); 
+  print_binary(swap_bits(x)); 
+  print_binary(swap_bits1(x)); 
+  return 0;
+}
+```
+
