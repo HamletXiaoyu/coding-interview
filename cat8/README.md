@@ -554,3 +554,223 @@ int main(){
 }
 
 ```
+
+
+# 8.4
+
+## 题目
+
+原文：
+
+Write a method to compute all permutations of a string
+
+译文：
+
+写一个函数返回一个串的所有排列
+
+## 解答
+
+对于一个长度为n的串，它的全排列共有A(n, n)=n!种。这个问题也是一个递归的问题， 不过我们可以用不同的思路去理解它。为了方便讲解，假设我们要考察的串是”abc”， 递归函数名叫permu。
+
+**思路一：**
+
+我们可以把串“abc”中的第0个字符a取出来，然后递归调用permu计算剩余的串“bc” 的排列，得到{bc, cb}。然后再将字符a插入这两个串中的任何一个空位(插空法)， 得到最终所有的排列。比如，a插入串bc的所有(3个)空位，得到{abc,bac,bca}。 递归的终止条件是什么呢？当一个串为空，就无法再取出其中的第0个字符了， 所以此时返回一个空的排列。代码如下：
+
+```
+typedef vector<string> vs;
+
+vs permu(string s){
+    vs result;
+    if(s == ""){
+        result.push_back("");
+        return result;
+    }
+    string c = s.substr(0, 1);
+    vs res = permu(s.substr(1));
+    for(int i=0; i<res.size(); ++i){
+        string t = res[i];
+        for(int j=0; j<=t.length(); ++j){
+            string u = t;
+            u.insert(j, c);
+            result.push_back(u);
+        }
+    }
+    return result; //调用result的拷贝构造函数，返回它的一份copy，然后这个局部变量销毁(与基本类型一样)
+}
+
+```
+
+**思路二：**
+
+我们还可以用另一种思路来递归解这个问题。还是针对串“abc”， 我依次取出这个串中的每个字符，然后调用permu去计算剩余串的排列。 然后只需要把取出的字符加到剩余串排列的每个字符前即可。对于这个例子， 程序先取出a，然后计算剩余串的排列得到{bc,cb}，然后把a加到它们的前面，得到 {abc,acb}；接着取出b，计算剩余串的排列得到{ac,ca}，然后把b加到它们前面， 得到{bac,bca}；后面的同理。最后就可以得到“abc”的全序列。代码如下：
+
+```
+vs permu1(string s){
+    vs result;
+    if(s == ""){
+        result.push_back("");
+        return result;
+    }
+    for(int i=0; i<s.length(); ++i){
+        string c = s.substr(i, 1);
+        string t = s;
+        vs res = permu1(t.erase(i, 1));
+        for(int j=0; j<res.size(); ++j){
+            result.push_back(c + res[j]);
+        }
+    }
+    return result;
+}
+
+```
+
+完整代码如下：
+
+```c++
+#include <iostream>
+#include <vector>
+using namespace std;
+
+typedef vector<string> vs;
+
+vs permu(string s){
+    vs result;
+    if(s == ""){
+        result.push_back("");
+        return result;
+    }
+    string c = s.substr(0, 1);
+    vs res = permu(s.substr(1));
+    for(int i=0; i<res.size(); ++i){
+        string t = res[i];
+        for(int j=0; j<=t.length(); ++j){
+            string u = t;
+            u.insert(j, c);
+            result.push_back(u);
+        }
+    }
+
+    return result; //调用result的拷贝构造函数，返回它的一份copy，然后这个局部变量销毁(与基本类型一样)
+}
+
+vs permu1(string s){
+    vs result;
+    if(s == ""){
+        result.push_back("");
+        return result;
+    }
+    for(int i=0; i<s.length(); ++i){
+        string c = s.substr(i, 1);
+        string t = s;
+        vs res = permu1(t.erase(i, 1));
+        for(int j=0; j<res.size(); ++j){
+            result.push_back(c + res[j]);
+        }
+    }
+    return result;
+}
+int main(){
+    string s = "abc";
+    vs res = permu1(s);
+    for(int i=0; i<res.size(); ++i)
+        cout<<res[i]<<endl;
+    return 0;
+}
+```
+
+# 8.5
+
+## 题目
+
+原文：
+
+Implement an algorithm to print all valid (e.g., properly opened and closed) combinations of n-pairs of parentheses.
+
+EXAMPLE:
+
+input: 3 (e.g., 3 pairs of parentheses)
+
+output: ((())), (()()), (())(), ()(()), ()()()
+
+译文：
+
+实现一个算法打印出n对括号的有效组合。
+
+例如：
+
+输入：3 （3对括号）
+
+输出：((())), (()()), (())(), ()(()), ()()()
+
+## 解答
+
+对于括号的组合，要考虑其有效性。比如说，)(， 它虽然也是由一个左括号和一个右括号组成，但它就不是一个有效的括号组合。 那么，怎样的组合是有效的呢？对于一个左括号，在它右边一定要有一个右括号与之配对， 这样的才能是有效的。所以，对于一个输出，比如说(()())， 从左边起，取到任意的某个位置得到的串，左括号数量一定是大于或等于右括号的数量， 只有在这种情况下，这组输出才是有效的。我们分别记左，右括号的数量为left和right， 如下分析可看出，(()())是个有效的括号组合。
+
+```
+(, left = 1, right = 0
+((, left = 2, right = 0
+((), left = 2, right = 1
+(()(, left = 3, right = 1
+(()(), left = 3, right = 2
+(()()), left = 3, right = 3
+
+```
+
+这样一来，在程序中，只要还有左括号，我们就加入输出串，然后递归调用。 当退出递归时，如果剩余的右括号数量比剩余的左括号数量多，我们就将右括号加入输出串。 直到最后剩余的左括号和右括号都为0时，即可打印一个输出串。代码如下：
+
+```
+void print_pare(int l, int r, char str[], int cnt){
+    if(l<0 || r<l) return;
+    if(l==0 && r==0){
+        for(int i=0; i<cnt; ++i){
+            cout<<str[i];
+        }
+        cout<<", ";
+    }
+    else{
+        if(l > 0){
+            str[cnt] = '(';
+            print_pare(l-1, r, str, cnt+1);
+        }
+        if(r > l){
+            str[cnt] = ')';
+            print_pare(l, r-1, str, cnt+1);
+        }
+    }
+}
+
+```
+
+完整代码如下：
+
+```c++
+#include <iostream>
+using namespace std;
+
+void print_pare(int l, int r, char str[], int cnt){
+    if(l<0 || r<l) return;
+    if(l==0 && r==0){
+        for(int i=0; i<cnt; ++i){
+            cout<<str[i];
+        }
+        cout<<", ";
+    }
+    else{
+        if(l > 0){
+            str[cnt] = '(';
+            print_pare(l-1, r, str, cnt+1);
+        }
+        if(r > l){
+            str[cnt] = ')';
+            print_pare(l, r-1, str, cnt+1);
+        }
+    }
+}
+int main(){
+    int cnt = 3;
+    char str[2*cnt];
+    print_pare(cnt, cnt, str, 0);
+    return 0;
+}
+```
+
