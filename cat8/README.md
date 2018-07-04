@@ -774,3 +774,268 @@ int main(){
 }
 ```
 
+# 8.6
+
+## 题目
+
+原文：
+
+Implement the “paint fill” function that one might see on many image editing programs. That is, given a screen (represented by a 2-dimensional array of Colors), a point, and a new color, fill in the surrounding area until you hit a border of that color.
+
+译文：
+
+实现图像处理软件中的“填充”函数，给定一块区域(可以不规则)，一个种子点和一种新颜色， 填充这块区域，直到到达这块区域的边界(边界是用这种新颜色画的一条封闭曲线)
+
+## 解答
+
+两种思路，一种递归，一种迭代。基本上能递归的都能迭代， 只不过有时迭代版本不是太好写。如果我没有记错， 填充函数在计算机图像学的书里是会讲的。给你一个种子点和一个颜色， 从这个种子点开始去把这块区域都填充上这种颜色。我们可以从这个种子点开始着色， 然后递归调用本函数去给它的上，下，左，右四个点着色。 递归停止条件是碰到这个区域的边界(边界是一条同种颜色绘制的封闭曲线)。比如说， 我先用绿色画了一个圆形(或是其它任意形状)，然后在这个形状中间再用绿色点击一下， 那么这块区域就被填充成绿色了。下面是代码：
+
+```
+bool paint_fill(color **screen, int m, int n, int x, int y, color c){
+    if(x<0 || x>=m || y<0 || y>=n) return false;
+    if(screen[x][y] == c) return false;
+    else{
+        screen[x][y] = c;
+        paint_fill(screen, m, n, x-1, y, c);
+        paint_fill(screen, m, n, x+1, y, c);
+        paint_fill(screen, m, n, x, y-1, c);
+        paint_fill(screen, m, n, x, y+1, c);
+    }
+    return true;
+}
+
+```
+
+迭代版本也不难，用BFS即可。每次给一个点着色后，就把它周围四个点放入队列， 只要队列不为空，就一直处理。这里需要注意一点的是，如果遇到一个点已经是新颜色， (比如上面说的绿色)，那么我就不用处理它而且不需要把它周围四个点入队。 如果不注意这点，那么填充色就会不顾边界直接把整张图片都填充成同一种颜色。 迭代版本的就不写了。以下是完整代码：
+
+```c++
+#include <iostream>
+#include <cstdio>
+using namespace std;
+
+enum color{
+    red, yellow, blue, green
+};
+
+bool paint_fill(color **screen, int m, int n, int x, int y, color c){
+    if(x<0 || x>=m || y<0 || y>=n) return false;
+    if(screen[x][y] == c) return false;
+    else{
+        screen[x][y] = c;
+        paint_fill(screen, m, n, x-1, y, c);
+        paint_fill(screen, m, n, x+1, y, c);
+        paint_fill(screen, m, n, x, y-1, c);
+        paint_fill(screen, m, n, x, y+1, c);
+    }
+    return true;
+}
+int main(){
+    freopen("8.6.in", "r", stdin);
+    int m, n;
+    cin>>m>>n;
+    color **screen = new color*[m];
+    for(int i=0; i<m; ++i)
+        screen[i] = new color[n];
+    for(int i=0; i<m; ++i)
+        for(int j=0; j<n; ++j){
+            int t;
+            cin>>t;
+            screen[i][j]=(color)t;
+        }
+    
+    // color screen[5][5] = {
+    //     {red, green, green, blue, yellow},
+    //     {green, red, yellow, green, green},
+    //     {green, green, red, blue, green},
+    //     {red, green, green, green, yellow},
+    //     {red, yellow, red, blue, yellow}
+    // };
+    paint_fill(screen, 5, 5, 1, 2, green);
+    for(int i=0; i<5; ++i){
+        for(int j=0; j<5; ++j)
+            cout<<screen[i][j]<<" ";
+        cout<<endl;
+    }
+    fclose(stdin);
+    return 0;
+}
+```
+
+# 8.7
+
+## 题目
+
+原文：
+
+Given an infinite number of quarters (25 cents), dimes (10 cents), nickels (5 cents) and pennies (1 cent), write code to calculate the number of ways of representing n cents.
+
+译文：
+
+我们有25分，10分，5分和1分的硬币无限个。写一个函数计算组成n分的方式有几种？
+
+## 解答
+
+一开始，我觉得使用递归不断地累加四种币值的硬币，当累加到n分，组成方式就加1。 最后就能得到一共有多少种组合方式，听起来挺正确的，然后写了以下代码：
+
+```
+int cnt = 0;
+void sumn(int sum, int n){
+    if(sum >= n){
+        if(sum == n) ++cnt;
+        return;
+    }
+    else{
+        sumn(sum+25, n);
+        sumn(sum+10, n);
+        sumn(sum+5, n);
+        sumn(sum+1, n);
+    }
+}```
+
+但，这是错误的。问题出在哪？有序与无序的区别！这个函数计算出来的组合是有序的，
+也就是它会认为1,5和5,1是不一样的，导致计算出的组合里有大量是重复的。
+那要怎么避免这个问题？1,5和5,1虽然会被视为不一样，但如果它们是排好序的，
+比如都按从大到小排序，那么就都是5,1了，这时就不会重复累计组合数量。
+可是我们总不能求出答案来后再搞个排序吧，多费劲。这时我们就可以在递归上做个手脚，
+让它在计算的过程中就按照从大到小的币值来组合。比如，
+现在我拿了一个25分的硬币，那下一次可以取的币值就是25,10,5,1；如果我拿了一个
+10分的，下一次可以取的币值就只有10,5,1了；这样一来，就能保证，同样的组合，
+我只累计了一次，改造后的代码如下：
+
+​```cpp
+int cnt = 0;
+void sumN(int sum, int c, int n){
+    if(sum >= n){
+        if(sum == n) ++cnt;
+        return;
+    }
+    else{
+        if(c >= 25)
+            sumN(sum+25, 25, n);
+        if(c >= 10)
+            sumN(sum+10, 10, n);
+        if(c >= 5)
+            sumN(sum+5, 5, n);
+        if(c >= 1)
+            sumN(sum+1, 1, n);
+    }
+}
+
+```
+
+有个全局变量总觉得看起来不好看，于是我们可以把这个全局变量去掉， 让函数来返回这个组合数目，代码如下：
+
+```
+int sum_n(int sum, int c, int n){
+    int ways = 0;
+    if(sum <= n){
+        if(sum == n) return 1;
+        if(c >= 25)
+            ways += sum_n(sum+25, 25, n);
+        if(c >= 10)
+            ways += sum_n(sum+10, 10, n);
+        if(c >= 5)
+            ways += sum_n(sum+5, 5, n);
+        if(c >= 1)
+            ways += sum_n(sum+1, 1, n);
+    }
+    return ways;
+}
+
+```
+
+CTCI原文中给出的解法如下：
+
+```
+int make_change(int n, int denom){
+    int next_denom = 0;
+    switch(denom){
+    case 25:
+        next_denom = 10;
+        break;
+    case 10:
+        next_denom = 5;
+        break;
+    case 5:
+        next_denom = 1;
+        break;
+    case 1:
+        return 1;
+    }
+    int ways = 0;
+    for(int i=0; i*denom<=n; ++i)
+        ways += make_change(n-i*denom, next_denom);
+    return ways;
+}
+
+```
+
+也是从币值大的硬币开始，每次取i个(i乘以币值要小于等于n)， 然后接着去取币值比它小的硬币，这时就是它的一个子问题了，递归调用。 具体来怎么来理解这个事呢？这样，比如我要凑100分，那我先从25分开始， 我先取0个25分，然后递归调用去凑100分；再然后我取1个25分，然后递归调用去凑100-25 =75分；接着我取2个25分，递归调用去凑100-25*2=50分……这些取了若干个 25分然后再去递归调用，取的就是10分了。一直这样操作下去，我们就会得到， 由若干个25，若干个10分，若干个5分和若干个1分组成的100分，而且， 这里面每种币值的数量都可以为0。
+
+完整代码如下：
+
+```c++
+#include <iostream>
+using namespace std;
+
+int cnt = 0;
+void sumN(int sum, int c, int n){
+    if(sum >= n){
+        if(sum == n) ++cnt;
+        return;
+    }
+    else{
+        if(c >= 25)
+            sumN(sum+25, 25, n);
+        if(c >= 10)
+            sumN(sum+10, 10, n);
+        if(c >= 5)
+            sumN(sum+5, 5, n);
+        if(c >= 1)
+            sumN(sum+1, 1, n);
+    }
+}
+int sum_n(int sum, int c, int n){
+    int ways = 0;
+    if(sum <= n){
+        if(sum == n) return 1;
+        if(c >= 25)
+            ways += sum_n(sum+25, 25, n);
+        if(c >= 10)
+            ways += sum_n(sum+10, 10, n);
+        if(c >= 5)
+            ways += sum_n(sum+5, 5, n);
+        if(c >= 1)
+            ways += sum_n(sum+1, 1, n);
+    }
+    return ways;
+}
+int make_change(int n, int denom){
+    int next_denom = 0;
+    switch(denom){
+    case 25:
+        next_denom = 10;
+        break;
+    case 10:
+        next_denom = 5;
+        break;
+    case 5:
+        next_denom = 1;
+        break;
+    case 1:
+        return 1;
+    }
+    int ways = 0;
+    for(int i=0; i*denom<=n; ++i)
+        ways += make_change(n-i*denom, next_denom);
+    return ways;
+}
+int main(){
+    int n = 10;
+    sumN(0, 25, n);
+    cout<<cnt<<endl;
+    cout<<make_change(n, 25)<<endl;
+    cout<<sum_n(0, 25, n)<<endl;
+    return 0;
+}
+```
