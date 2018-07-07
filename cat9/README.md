@@ -154,3 +154,169 @@ int main(){
 }
 ```
 
+# 9.3
+
+## 题目
+
+原文：
+
+Given a sorted array of n integers that has been rotated an unknown number of times, give an O(log n) algorithm that finds an element in the array. You may assume that the array was originally sorted in increasing order.
+
+EXAMPLE:
+
+Input: find 5 in array (15 16 19 20 25 1 3 4 5 7 10 14)
+
+Output: 8 (the index of 5 in the array)
+
+译文：
+
+一个数组有n个整数，它们排好序(假设为升序)但被旋转了未知次， 即每次把最右边的数放到最左边。给出一个O(log n)的算法找到特定的某个元素。
+
+例子：
+
+输入：在数组(15 16 19 20 25 1 3 4 5 7 10 14)中找出5
+
+输出：8（5在数组中的下标）
+
+## 解答
+
+题目中提到了几个关键的词：有序，O(log n)。我们马上能联想到的就是二分查找算法。 但简单的二分查找肯定不行，因为这个数组被旋转了。也就是该数组前面一段有序， 后面一段有序，且前面那段的数要大于等于后面那段的数(本题考虑递增序列，递减同理)。 因此，我们需要对二分查找算法做一下修改，来解决这个具体的问题。
+
+首先，我们来看一下函数原型：
+
+```
+int search(int a[], int low, int high, int x);
+
+```
+
+参数和二分查找一样，数组a，下界low，上界high及要查找的数x。当low <= high时， 我们会去求它们中间的那个数，然后与x对比，如果相同，就返回下标：
+
+```
+int mid = low + (high - low)/2;
+if(a[mid] == x) return mid;
+
+```
+
+如果a[mid]不等于x，就要分情况讨论了。我们把旋转后的数组分为前半段和后半段， 两段分别都是有序的，且前半段的数都大于后半段的数。假如a[mid]落在前半段 (即a[mid]>=a[low])，这时如果x的值是位于a[low]和a[mid]之间， 则更新high = mid - 1；否则更新low = mid + 1。假如a[mid]落在后半段 (即a[mid]<a[low])，这时如果x的值是位于a[mid]和a[low]之间， 则更新low = mid + 1；否则更新high = mid - 1。
+
+代码如下：
+
+```c++
+#include <iostream>
+using namespace std;
+
+int search(int a[], int low, int high, int x){
+    while(low <= high){
+        int mid = low + (high - low)/2;
+        if(a[mid] == x) return mid;
+        if(a[mid] >= a[low]) {
+            if(x<a[mid] && x>=a[low])
+                high = mid - 1;
+            else
+                low = mid + 1;
+        }
+        else {
+            if(x>a[mid] && x<a[low])
+                low = mid + 1;
+            else
+                high = mid - 1;
+        }
+    }
+    return -1;
+}
+
+int main(){
+    int a[12] = {
+        15, 16, 19, 20, 25, 1, 3, 4, 5, 7, 10, 14
+    };
+    int b[19] = {
+        2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2
+    };
+    cout<<search(a, 0, 11, 3)<<endl;
+    return 0;
+}
+```
+
+# 9.4
+
+## 题目
+
+原文：
+
+If you have a 2 GB file with one string per line, which sorting algorithm would you use to sort the file and why?
+
+译文：
+
+如果你有个2GB的文件，其中每一行是一个字符串，你会使用哪种算法来排序，为什么？
+
+## 解答
+
+当面试官说到2GB文件的时候，他其实就是在暗示你， 他并不希望一次性把所有的数据都载入内存。这样子的话，我们要怎么做呢？ 我们每次就将部分数据载入内存就好了。
+
+算法：
+
+首先我们要了解，可以用的内存有多大？假设我们有X MB的内存可用。
+
+1. 我们将文件分为K份，其中X*K=2GB。每次取其中一份载入到内存中， 用O(nlog n)的算法排序，然后再保存到外部文件。
+2. 载入下一份并排序
+3. 当我们将K份小文件都排好序，合并它们。
+
+上面的算法就是外排序，步骤3又称为N路归并。
+
+使用外排序是由于数据太大了，无法一次全部加载到内存中，所以需要借助磁盘进行存储， 每次只从磁盘中加载一部分数据进入内存，进行排序。
+
+
+
+# 9.5
+
+## 题目
+
+原文：
+
+Given a sorted array of strings which is interspersed with empty strings, write a method to find the location of a given string.
+
+Example: find “ball” in [“at”, “”, “”, “”, “ball”, “”, “”, “car”, “”,“”, “dad”, “”, “”] will return 4
+
+Example: find “ballcar” in [“at”, “”, “”, “”, “”, “ball”, “car”, “”, “”, “dad”, “”, “”] will return -1
+
+译文：
+
+给你一个排好序的并且穿插有空字符串的字符串数组，写一个函数找到给定字符串的位置。
+
+例子：在字符串数组 [“at”, “”, “”, “”, “ball”, “”, “”, “car”, “”,“”, “dad”, “”, “”] 中找到”ball”，返回下标4.
+
+例子：在字符串数组 [“at”, “”, “”, “”, “”, “ball”, “car”, “”, “”, “dad”, “”, “”] 中找到”ballcar”，查找失败，返回-1.
+
+## 解答
+
+字符串数组已经是有序的了，所以，还是可以利用二分查找来找到指定的字符串。 当然了，由于数组中有空字符串，因此还要加些额外的处理，否则无法对比大小。 我们可以这样来处理，如果要对比的那个元素为空字符串，就一直向右移动， 直到字符串不为空或是位置已经超出了high下标。如果位置已经超出high下标， 就在[low, mid-1]这一段查找；如果没有超出high下标，那就和要查找的x进行对比。 相等时返回下标，不等时再根据比较出的大小决定到哪一半去查找。
+
+代码如下：
+
+```c++
+#include <iostream>
+using namespace std;
+
+int search(string s[], int low, int high, string x){
+    if(x == "") return -1;	
+    while(low <= high){
+        int mid = (low+high)>>1;
+        int t = mid;
+        while(s[t] == "" && t <= high) ++t;
+        if(t > high) high = mid - 1;
+        else{
+            if(s[t] == x) return t;
+            else if(s[t] < x) low = t + 1;
+            else high = mid - 1; //or t-1
+        }
+    }
+    return -1;
+}
+int main(){
+    string s[13] = {
+        "at", "", "", "", "ball", "", "", "car", "", "", "dad", "", ""
+    };
+    cout<<search(s, 0, 12, "ball")<<endl;
+    return 0;
+}
+```
