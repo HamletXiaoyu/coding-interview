@@ -320,3 +320,183 @@ int main(){
     return 0;
 }
 ```
+# 9.6
+
+## 题目
+
+原文：
+
+Given a matrix in which each row and each column is sorted, write a method to find an element in it.
+
+译文：
+
+给出一个矩阵，其中每一行和每一列都是有序的，写一个函数在矩阵中找出指定的数。
+
+## 解答
+
+我们假设这个矩阵每一行都是递增的，每一列也都是递增的，并把这些数据存入文件 9.6.in(如下)，其中开头的两个数5 5表示该矩阵是5*5的。
+
+```
+5 5
+1 2 3 4 5
+3 7 8 9 11
+5 9 10 17 18
+7 12 15 19 23
+9 13 16 20 25
+
+```
+
+这个矩阵是有序的，因此我们要利用这一点，当矩阵中元素和要查找的元素对比后， 如果相等，我们返回下标；如果不等，我们就排除掉一些元素，而不仅仅是对比的元素。 我们从矩阵的四个角的元素入手看看，有什么特点。左上角是最小的， 因为矩阵向右是递增的，向下也是递增的。同理，右下角是最大的。让我们来看看右上角， 设要查找的元素为x，比如x比右上角元素5大，那么它也会比第一行的其它元素都大。 因此可以去掉第一行；如果它比右上角元素小，那么它也会比最后一列的元素都小， 因此可以去掉最后一列；然后这样不断地比下去，只需要O(m+n)的时间就查找完。 对于左下角的元素，也有一样的特点。就不再分析了。
+
+代码如下：
+
+```c++
+#include <iostream>
+#include <cstdio>
+using namespace std;
+
+int d[20][20];
+int search(int m, int n, int x){
+    int r = 0, c = n-1;
+    while(r<m && c>=0){
+        if(d[r][c] == x) return (r * n + c);
+        else if(d[r][c] < x) ++r;
+        else --c;
+    }
+    return -1;
+}
+int main(){
+    freopen("9.6.in", "r", stdin);
+    int m, n;
+    cin>>m>>n;
+    for(int i=0; i<m; ++i)
+        for(int j=0; j<n; ++j)
+            cin>>d[i][j];
+
+    int k = search(m, n, 13);
+    if(k == -1) cout<<"not found"<<endl;
+    else cout<<"position: "<<k/n<<" "<<k%n<<endl;
+    fclose(stdin);
+    return 0;
+}
+```
+
+# 9.7
+
+## 题目
+
+原文：
+
+A circus is designing a tower routine consisting of people standing atop one another’s shoulders. For practical and aesthetic reasons, each person must be both shorter and lighter than the person below him or her. Given the heights and weights of each person in the circus, write a method to compute the largest possible number of people in such a tower.
+
+EXAMPLE:
+
+Input (ht, wt): (65, 100) (70, 150) (56, 90) (75, 190) (60, 95) (68, 110)
+
+Output: The longest tower is length 6 and includes from top to bottom: (56, 90) (60,95) (65,100) (68,110) (70,150) (75,190)
+
+译文:
+
+马戏团设计了这样一个节目：叠罗汉。一群人往上叠，每个人都踩在另一个人的肩膀上。 要求上面的人要比下面的人矮而且比下面的人轻。给出每个人的身高和体重， 写一个函数计算叠罗汉节目中最多可以叠多少人？
+
+例子：
+
+输入(身高 体重)：(65, 100) (70, 150) (56, 90) (75, 190) (60, 95) (68, 110)
+
+输出：最多可叠人数：6 （从上到下是：(56, 90) (60,95) (65,100) (68,110) (70,150) (75,190)）
+
+## 解答
+
+给定了(身高 体重)序列，要求我们排序。不过由于要排序的对象是一个结构， 我们可以先按其中的一个指标进行排序，比如说身高。身高排好序后， 身高这个指标就都是满足叠罗汉的要求了，剩下的就看体重。 我们就只要在体重那个维度找到最长的递增子序列就可以了。
+
+我们先定义一个结构体：
+
+```
+const int maxn = 100;
+struct person{
+    int h, w;
+};
+person p[maxn];
+
+```
+
+然后为了使STL中的sort函数能对这个结构体先按身高排序，当身高相等时按体重排序， 我们还需要写一个对比函数作为sort的参数：
+
+```
+bool cmp(person p1, person p2){
+    if(p1.h == p2.h) return p1.w < p2.w;
+    else return p1.h < p2.h;
+}
+
+```
+
+这样一来，当我们调用sort函数，就能达到先对身高排序，若身高相等时对体重排序的要求。
+
+```
+sort(p, p+n, cmp);
+
+```
+
+排好序后，只需要求体重序列的最长递增子序列(LIS)即可。关于求LIS，可以参考文章： [动态规划：从新手到专家](http://www.hawstein.com/posts/dp-novice-to-advanced.html)
+
+```
+int lis(person p[], int n){
+    int k = 1;
+    d[0] = p[0].w;
+    for(int i=1; i<n; ++i){
+        if(p[i].w >= d[k-1]) d[k++] = p[i].w;
+        else{
+            int j;
+            for(j=k-1; j>=0 && d[j]>p[i].w; --j);//用二分可将复杂度降到O(nlogn)
+            d[j+1] = p[i].w;
+        }
+    }
+    return k;
+}
+
+```
+
+完整代码如下：
+
+```
+#include <iostream>
+#include <cstdio>
+#include <algorithm>
+using namespace std;
+
+const int maxn = 100;
+struct person{
+    int h, w;
+};
+person p[maxn];
+int d[maxn];
+
+bool cmp(person p1, person p2){
+    if(p1.h == p2.h) return p1.w < p2.w;
+    else return p1.h < p2.h;
+}
+int lis(person p[], int n){
+    int k = 1;
+    d[0] = p[0].w;
+    for(int i=1; i<n; ++i){
+        if(p[i].w >= d[k-1]) d[k++] = p[i].w;
+        else{
+            int j;
+            for(j=k-1; j>=0 && d[j]>p[i].w; --j);//用二分可将复杂度降到O(nlogn)
+            d[j+1] = p[i].w;
+        }
+    }
+    return k;
+}
+int main(){
+    freopen("9.7.in", "r", stdin);
+    int n;
+    cin>>n;
+    for(int i=0; i<n; ++i)
+        cin>>p[i].h>>p[i].w;
+    sort(p, p+n, cmp);
+    cout<<lis(p, n)<<endl;
+    fclose(stdin);
+    return 0;
+}
+```
