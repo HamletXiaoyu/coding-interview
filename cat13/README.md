@@ -1,3 +1,7 @@
+# 13 C++ tips
+
+
+
 ## 题目
 
 原文：
@@ -251,3 +255,277 @@ void Fn(void){
 
 由于程序中并没有对opt进行修改，因此将if中的条件设置为恒真。这样一来， 就陷入了无限循环中。但是，如果我们给opt加上volatile修饰， 表明外部程序有可能对它进行修改。那么，编译器就不会做上述优化， 上述程序在opt被外部程序修改后将跳出循环。此外， 当我们在一个多线程程序中声明了一些全局变量，且任何一个线程都可以修改这些变量时， 关键字volatile也会派上用场。在这种情况下， 我们就要明确地告诉编译器不要对这些全局变量的相关代码做优化。
 
+## 题目13.6
+
+原文：
+
+What is name hiding in C++?
+
+译文
+
+C++中名字隐藏是什么？
+
+## 解答
+
+让我们通过一个例子来讲解C++中的名字隐藏。在C++中，如果一个类里有一个重载的方法， 你用另一个类去继承它并重写(覆盖)那个方法。你必须重写所有的重载方法， 否则未被重写的方法会因为名字相同而被隐藏，从而使它在派生类中不可见。
+
+请看例子：
+
+```
+class FirstClass{
+public:
+    virtual void MethodA(int);
+    virtual void MethodA(int, int);
+};
+void FirstClass::MethodA(int i){
+    cout<<"ONE"<<endl;
+}
+void FirstClass::MethodA(int i, int j){
+    cout<<"TWO"<<endl;
+}
+
+```
+
+上面的类中有两个方法(重载的方法)，如果你想在派生类中重写一个参数的函数， 你可以这么做：
+
+```
+class SecondClass : public FirstClass{
+public:
+    void MethodA(int);
+};
+void SecondClass::MethodA(int i){
+    cout<<"THREE"<<endl;
+}
+
+int main (){
+    SecondClass a;
+    a.MethodA(1);
+    a.MethodA(1, 1);
+    return 0;
+}
+
+```
+
+上面的main函数中，第2个MethodA在编译时会报错，提示没有与之匹配的函数。 这是因为两个参数的MethodA在派生类中是不可见的，这就是名字隐藏。
+
+名字隐藏与虚函数无关。所以不管基类中那两个函数是不是虚函数， 在这里都会发生名字隐藏。解决方法有两个。第一个是将2个参数的MethodA换一个名字， 那么它在派生类中就可见了。但我们既然重载了MethodA，说明它们只是参数不同， 而实际上应该是在做相同或是相似的事的。所以换掉名字并不是个好办法。因此， 我们一般采用第二种方法，在派生类中重写所有的重载函数。
+
+
+
+## 题目
+
+原文：
+
+Why does a destructor in base class need to be declared virtual?
+
+译文：
+
+为什么基类中的析构函数要声明为虚析构函数？
+
+## 解答
+
+用对象指针来调用一个函数，有以下两种情况：
+
+1. 如果是虚函数，会调用派生类中的版本。
+2. 如果是非虚函数，会调用指针所指类型的实现版本。
+
+析构函数也会遵循以上两种情况，因为析构函数也是函数嘛，不要把它看得太特殊。 当对象出了作用域或是我们删除对象指针，析构函数就会被调用。
+
+当派生类对象出了作用域，派生类的析构函数会先调用，然后再调用它父类的析构函数， 这样能保证分配给对象的内存得到正确释放。
+
+但是，如果我们删除一个指向派生类对象的基类指针，而基类析构函数又是非虚的话， 那么就会先调用基类的析构函数(上面第2种情况)，派生类的析构函数得不到调用。
+
+请看例子：
+
+```
+class Base{
+public:
+    Base() { cout<<"Base Constructor"<<endl; }
+    ~Base() { cout<<"Base Destructor"<<endl; }
+};
+class Derived: public Base{
+public:
+    Derived() { cout<<"Derived Constructor"<<endl; }
+    ~Derived() { cout<<"Derived Destructor"<<endl; }
+};
+int main(){
+    Base *p = new Derived();
+    delete p;
+    return 0;
+}
+
+```
+
+输出是：
+
+```
+Base Constructor
+Derived Constructor
+Base Destructor
+
+```
+
+如果我们把基类的析构函数声明为虚析构函数，这会使得所有派生类的析构函数也为虚。 从而使析构函数得到正确调用。
+
+将基类的析构函数声明为虚的之后，得到的输出是：
+
+```
+Base Constructor
+Derived Constructor
+Derived Destructor
+Base Destructor
+
+```
+
+因此，如果我们可能会删除一个指向派生类的基类指针时，应该把析构函数声明为虚函数。 事实上，《Effective C++》中的观点是，只要一个类有可能会被其它类所继承， 就应该声明虚析构函数。
+
+## 题目
+
+原文：
+
+Write a method that takes a pointer to a Node structure as a parameter and returns a complete copy of the passed-in data structure. The Node structure contains two pointers to other Node structures.
+
+译文：
+
+写一个函数，其中一个参数是指向Node结构的指针，返回传入数据结构的一份完全拷贝。 Node结构包含两个指针，指向另外两个Node。
+
+## 解答
+
+以下算法将维护一个从原结构的地址到新结构的地址的映射， 这种映射可以让程序发现之前已经拷贝的结点，从而不用为已有结点再拷贝一份。 由于结点中包含指向Node的指针，我们可以通过递归的方式进行结点复制。以下是代码：
+
+```
+typedef map<Node*, Node*> NodeMap;
+Node* copy_recursive(Node *cur, NodeMap &nodeMap){
+    if(cur == NULL){
+        return NULL;
+    }
+    NodeMap::iterator i = nodeMap.find(cur);
+    if (i != nodeMap.end()){
+        // we’ve been here before, return the copy
+        return i->second;
+    }
+    Node *node = new Node;
+    nodeMap[cur] = node; // map current node before traversing links
+    node->ptr1 = copy_recursive(cur->ptr1, nodeMap);
+    node->ptr2 = copy_recursive(cur->ptr2, nodeMap);
+    return node;
+}
+Node* copy_structure(Node* root){
+    NodeMap nodeMap; // we will need an empty map
+    return copy_recursive(root, nodeMap);
+}
+```
+
+
+
+## 题目
+
+原文：
+
+Write a smart pointer (smart_ptr) class.
+
+译文：
+
+写一个智能指针类(smart_ptr)。
+
+## 解答
+
+比起一般指针，智能指针会自动地管理内存(释放不需要的内存)，而不需要程序员去操心。 它能避免迷途指针(dangling pointers)，内存泄漏(memory leaks)， 分配失败等情况的发生。智能指针需要为所有实例维护一个引用计数， 这样才能在恰当的时刻(引用计数为0时)将内存释放。
+
+```
+#include <iostream>
+#include <cstdlib>
+using namespace std;
+
+template <typename T>
+class SmartPointer{
+public:
+    SmartPointer(T* ptr){
+        ref = ptr;
+        ref_count = (unsigned*)malloc(sizeof(unsigned));
+        *ref_count = 1;
+    }
+	
+    SmartPointer(SmartPointer<T> &sptr){
+        ref = sptr.ref;
+        ref_count = sptr.ref_count;
+        ++*ref_count;
+    }
+	
+    SmartPointer<T>& operator=(SmartPointer<T> &sptr){
+        if (this != &sptr) {
+            if (--*ref_count == 0){
+                clear();
+                cout<<"operator= clear"<<endl;
+            }
+            
+            ref = sptr.ref;
+            ref_count = sptr.ref_count;
+            ++*ref_count;
+        }
+        return *this;
+    }
+	
+    ~SmartPointer(){
+        if (--*ref_count == 0){
+            clear();
+            cout<<"destructor clear"<<endl;
+        }
+    }
+	
+    T getValue() { return *ref; }
+    
+private:
+    void clear(){
+        delete ref;
+        free(ref_count);
+        ref = NULL; // 避免它成为迷途指针
+        ref_count = NULL;
+    }
+   
+protected:	
+    T *ref;
+    unsigned *ref_count;
+};
+
+int main(){
+    int *ip1 = new int();
+    *ip1 = 11111;
+    int *ip2 = new int();
+    *ip2 = 22222;
+    SmartPointer<int> sp1(ip1), sp2(ip2);
+    SmartPointer<int> spa = sp1;
+    sp2 = spa; // 注释掉它将得到不同输出
+    return 0;
+}
+
+```
+
+上述代码有一点值得注意一下，原书在赋值函数中， 并没有检查原指针的引用计数是否已经减为0，然后去释放原指针所指向的内存。 也就是原书的代码有可能导致内存泄漏。正确的做法应该是在把指针指向新的地址前， 将原来指向的引用计数减1，如果为0，说明这个指针在指向新的地址后， 原来指向的内存将不再有指针指向它。那么我们就要把它释放， 否则内存就会在你眼皮底下泄漏的哦。
+
+上述代码main函数中，sp2 = spa这一句如果注释掉，我们得到的输出是：
+
+```
+destructor clear
+destructor clear
+
+```
+
+说明内存的清理都是在main函数退出调用析构函数时。如果我们没有注释掉那行代码， 输出是：
+
+```
+operator= clear
+destructor clear
+
+```
+
+说明当sp2指向新的内存后，原来的内存由于没有指针指向它而被释放掉。 另一块内存则是在main函数退出时释放的。
+
+如果像CTCI书上所写，当sp2 = spa这一句没有注释掉时，输出是：
+
+```
+destructor clear
+
+```
+
+也就是只释放了一块内存(ip1指向的内存)，另一块由于没有指针指向它， 而又不及时清理，结果泄漏了。
